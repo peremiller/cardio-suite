@@ -12,6 +12,11 @@ async function hashPassword(password) {
   return bytesToHex(sha256(new TextEncoder().encode(password)));
 }
 
+function createAccountId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `user-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function normalizeEmail(email) {
   return email.trim().toLowerCase();
 }
@@ -58,7 +63,7 @@ export async function createAccount({ name, email, password, role }) {
     "clinic-admin": "Clinic Administrator",
   };
   const account = {
-    id: crypto.randomUUID(),
+    id: createAccountId(),
     name: name.trim(),
     email: normalizedEmail,
     role,
