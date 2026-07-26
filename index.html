@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardioSuite - Medical Assistant & Clinical Ops Platform</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --secondary: #0f172a;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 260px;
+            background-color: var(--secondary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .brand {
+            padding: 24px 20px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .brand-icon {
+            color: var(--accent-red);
+            font-size: 1.5rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 20px 0;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: white;
+            background-color: rgba(255,255,255,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .user-profile {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .user-info {
+            font-size: 0.85rem;
+        }
+
+        .user-role {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title h1 {
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .scope-badge {
+            background-color: #fef3c7;
+            color: #92400e;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #fde68a;
+        }
+
+        .content-area {
+            padding: 32px;
+            flex-grow: 1;
+        }
+
+        .view-panel {
+            display: none;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        /* Grid Layouts & Cards */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background-color: var(--accent-red);
+            color: white;
+        }
+
+        /* Vitals Specifics */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .vital-card {
+            background-color: #f1f5f9;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .vital-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin: 8px 0;
+        }
+
+        .vital-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .status-normal { background: #d1fae5; color: #065f46; }
+        .status-warning { background: #fef3c7; color: #92400e; }
+        .status-danger { background: #fee2e2; color: #991b1b; }
+
+        /* ECG Simulator Canvas */
+        .ecg-container {
+            background: #000;
+            border-radius: 8px;
+            padding: 16px;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 180px;
+            background-color: #051405;
+            border: 1px solid #00ff0033;
+            border-radius: 4px;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-pending { background: #fffbe3; color: #b45309; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-urgent { background: #fee2e2; color: #991b1b; }
+
+        /* Scope Alert Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .modal-card h3 {
+            color: var(--accent-red);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside>
+        <div>
+            <div class="brand">
+                <span class="brand-icon">♥</span> CardioSuite MA
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="switchTab('rooming')">
+                    <i>📋</i> Patient Rooming & Vitals
+                </li>
+                <li class="nav-item" onclick="switchTab('ecg')">
+                    <i>⚡</i> 12-Lead ECG & Diagnostics
+                </li>
+                <li class="nav-item" onclick="switchTab('scheduling')">
+                    <i>📅</i> Schedule & Pre-Auth
+                </li>
+                <li class="nav-item" onclick="switchTab('triage')">
+                    <i>🚨</i> Triage & Escalations
+                </li>
+                <li class="nav-item" onclick="switchTab('scope')">
+                    <i>🛡️</i> Scope Guidelines
+                </li>
+            </ul>
+        </div>
+        <div class="user-profile">
+            <div class="avatar">MA</div>
+            <div class="user-info">
+                <div>Sarah Jenkins, CCMA</div>
+                <div class="user-role">Cardiology Clinic Assistant</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main>
+        <header>
+            <div class="page-title">
+                <h1 id="header-title">Patient Rooming & Intake</h1>
+                <p id="header-desc">Record vital signs, update medications, and prepare patient history for the cardiologist.</p>
+            </div>
+            <div class="scope-badge">
+                <i>⚠️</i> Assistant Scope Guard Active
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <!-- TAB 1: Patient Rooming & Intake -->
+            <div id="rooming" class="view-panel active">
+                <div class="grid-2">
+                    <!-- Intake Form -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Patient Intake & Vital Signs Entry</span>
+                        </div>
+                        <form id="vitalsForm" onsubmit="event.preventDefault(); processVitals();">
+                            <div class="form-group">
+                                <label>Select Patient</label>
+                                <select class="form-control" id="patientSelect">
+                                    <option value="John Doe (DOB: 04/12/1954)">John Doe - 72y/o Male (Routine Follow-up)</option>
+                                    <option value="Eleanor Vance (DOB: 11/23/1948)">Eleanor Vance - 77y/o Female (New Onset Dyspnea)</option>
+                                    <option value="Robert Miller (DOB: 08/03/1962)">Robert Miller - 63y/o Male (Post-PCI Checkup)</option>
+                                </select>
+                            </div>
+                            <div class="vitals-grid" style="margin-bottom: 16px;">
+                                <div class="form-group">
+                                    <label>BP (Systolic)</label>
+                                    <input type="number" id="sysBP" class="form-control" placeholder="120" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>BP (Diastolic)</label>
+                                    <input type="number" id="diaBP" class="form-control" placeholder="80" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>HR (BPM)</label>
+                                    <input type="number" id="heartRate" class="form-control" placeholder="72" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>SpO2 (%)</label>
+                                    <input type="number" id="spo2" class="form-control" placeholder="98" required>
+                                </div>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Weight (lbs)</label>
+                                    <input type="number" id="weight" class="form-control" placeholder="175">
+                                </div>
+                                <div class="form-group">
+                                    <label>Height (in)</label>
+                                    <input type="number" id="height" class="form-control" placeholder="68">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Reconciled Medication List</label>
+                                <textarea id="medsList" class="form-control" rows="2" placeholder="List verified medications, dosages, and compliance..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Chief Complaint / History Capture</label>
+                                <textarea id="historyNotes" class="form-control" rows="2" placeholder="Document patient's statements in their own words..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save to EMR & Alert Physician</button>
+                        </form>
+                    </div>
+
+                    <!-- Live Dashboard / Vitals Summary -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Live Intake Vitals Overview</span>
+                                <span id="vitalsTimestamp" style="font-size: 0.75rem; color: var(--text-muted);">Not recorded</span>
+                            </div>
+                            <div class="vitals-grid">
+                                <div class="vital-card">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Blood Pressure</div>
+                                    <div class="vital-val" id="dispBP">--/--</div>
+                                    <span class="vital-status status-normal" id="statusBP">Pending</span>
+                                </div>
+                                <div class="vital-card">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">Heart Rate</div>
+                                    <div class="vital-val" id="dispHR">--</div>
+                                    <span class="vital-status status-normal" id="statusHR">Pending</span>
+                                </div>
+                                <div class="vital-card">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">SpO2</div>
+                                    <div class="vital-val" id="dispSpO2">--%</div>
+                                    <span class="vital-status status-normal" id="statusSpO2">Pending</span>
+                                </div>
+                                <div class="vital-card">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted);">BMI</div>
+                                    <div class="vital-val" id="dispBMI">--</div>
+                                    <span class="vital-status status-normal" id="statusBMI">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">EMR Pre-Rooming Summary</span>
+                            </div>
+                            <div id="emrSummary" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);">
+                                Select a patient and submit their vital signs to generate a structured clinical handover note for the cardiologist.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ECG & Diagnostics -->
+            <div id="ecg" class="view-panel">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">12-Lead ECG Monitor Hookup & Acquisition</span>
+                            <span class="badge badge-approved">Leads Connected (12/12)</span>
+                        </div>
+                        <div class="ecg-container">
+                            <canvas id="ecgCanvas"></canvas>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px;">
+                            <button class="btn btn-primary" onclick="simulateECG('normal')">Normal Sinus Rhythm</button>
+                            <button class="btn btn-danger" onclick="simulateECG('arrhythmia')">Simulate STEMI / Critical</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Diagnostic Monitor & Equipment Checklist</span>
+                        </div>
+                        <div style="font-size: 0.9rem; margin-bottom: 16px;">
+                            <p><strong>Holter / Event Monitor Setup:</strong></p>
+                            <ul style="margin-left: 20px; margin-top: 6px; color: var(--text-muted);">
+                                <li>Skin prepped & alcohol abraded</li>
+                                <li>5-lead/7-lead placement verified</li>
+                                <li>Fresh batteries inserted & diary provided</li>
+                            </ul>
+                        </div>
+                        <div style="font-size: 0.9rem; margin-bottom: 16px;">
+                            <p><strong>Stress Test Preparation:</strong></p>
+                            <ul style="margin-left: 20px; margin-top: 6px; color: var(--text-muted);">
+                                <li>Verified patient held Beta-Blockers (if ordered)</li>
+                                <li>Comfortable footwear confirmed</li>
+                                <li>Crash cart & AED checked and operational</li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-primary" onclick="triggerScopeModal('ECG Interpretation')">Attempt ECG Interpretation (Scope Check)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Scheduling & Pre-Auth -->
+            <div id="scheduling" class="view-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Prior-Authorization & Diagnostic Booking Tracker</span>
+                        <button class="btn btn-primary" onclick="alert('New authorization request initiated.')">+ New Authorization</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Procedure / Test Requested</th>
+                                <th>Insurance / HMO</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Eleanor Vance</td>
+                                <td>SPECT Nuclear Stress Test</td>
+                                <th>BlueCross / HMO</th>
+                                <td><span class="badge badge-pending">Pending Auth</span></td>
+                                <td><button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="this.innerText='Submitted'">Upload Clinicals</button></td>
+                            </tr>
+                            <tr>
+                                <td>Robert Miller</td>
+                                <td>2D Echocardiogram w/ Doppler</td>
+                                <th>Medicare / Aetna</th>
+                                <td><span class="badge badge-approved">Approved</span></td>
+                                <td><button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="alert('Scheduling patient...')">Book Appointment</button></td>
+                            </tr>
+                            <tr>
+                                <td>Sarah Jenkins</td>
+                                <td>30-Day Cardiac Event Monitor</td>
+                                <th>United Healthcare</th>
+                                <td><span class="badge badge-urgent">Needs Info</span></td>
+                                <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="alert('Attaching Cardiologist Letter of Medical Necessity')">Submit LMN</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 4: Triage & Urgent Escalations -->
+            <div id="triage" class="view-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Clinical Triage & Symptom Escalation Protocol</span>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+                        When handling incoming phone calls or patient inquiries, immediately triage red-flag cardiovascular symptoms.
+                    </p>
+                    <div class="grid-3">
+                        <div style="border: 1px solid var(--accent-red); background: #fef2f2; padding: 16px; border-radius: 8px;">
+                            <h4 style="color: var(--accent-red); margin-bottom: 8px;">🚨 RED FLAG (Immediate 911 / Emergent)</h4>
+                            <ul style="font-size: 0.85rem; margin-left: 16px; color: #7f1d1d; line-height: 1.5;">
+                                <li>Active, crushing chest pressure or pain</li>
+                                <li>Acute dyspnea / severe breathlessness at rest</li>
+                                <li>Syncope (fainting) or acute altered mental status</li>
+                                <li>Pain radiating to jaw, neck, or left arm</li>
+                            </ul>
+                        </div>
+                        <div style="border: 1px solid var(--accent-yellow); background: #fffbe3; padding: 16px; border-radius: 8px;">
+                            <h4 style="color: #b45309; margin-bottom: 8px;">⚠️ URGENT (Same-Day Physician Notification)</h4>
+                            <ul style="font-size: 0.85rem; margin-left: 16px; color: #78350f; line-height: 1.5;">
+                                <li>New onset peripheral edema (swelling in legs)</li>
+                                <li>Weight gain &gt; 3 lbs in 24 hrs (HF indicator)</li>
+                                <li>Symptomatic bradycardia or palpitations</li>
+                                <li>BP &gt; 180/110 without acute symptoms</li>
+                            </ul>
+                        </div>
+                        <div style="border: 1px solid var(--accent-green); background: #f0fdf4; padding: 16px; border-radius: 8px;">
+                            <h4 style="color: #065f46; margin-bottom: 8px;">✅ ROUTINE (Standard Processing)</h4>
+                            <ul style="font-size: 0.85rem; margin-left: 16px; color: #064e3b; line-height: 1.5;">
+                                <li>Prescription refill requests without symptom changes</li>
+                                <li>Routine appointment rescheduling</li>
+                                <li>Pre-procedure fasting questions</li>
+                                <li>General lab result inquiry status</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: Scope Safeguards -->
+            <div id="scope" class="view-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Cardiology Assistant Scope of Practice Boundary</span>
+                    </div>
+                    <div style="line-height: 1.6; font-size: 0.95rem;">
+                        <blockquote style="background: #f1f5f9; border-left: 4px solid var(--primary); padding: 12px 16px; margin-bottom: 16px; border-radius: 0 8px 8px 0;">
+                            <strong>Important Clinical Boundary:</strong> The Medical Assistant supports clinical workflows but must <u>never</u> independently diagnose medical conditions, interpret ECG/diagnostic results, alter medication doses, or give unapproved clinical advice.
+                        </blockquote>
+                        <div class="grid-2">
+                            <div>
+                                <h4 style="color: var(--accent-green); margin-bottom: 8px;">Allowed Assistant Responsibilities</h4>
+                                <ul style="margin-left: 20px; font-size: 0.9rem; color: var(--text-main);">
+                                    <li>Performing 12-lead ECG lead placement</li>
+                                    <li>Hooking up Holter and Event monitors</li>
+                                    <li>Recording vital signs and weight accurately</li>
+                                    <li>Reconciling current medication lists</li>
+                                    <li>Transmitting diagnostic reports to the physician</li>
+                                    <li>Relaying physician-approved instructions to patients</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 style="color: var(--accent-red); margin-bottom: 8px;">Strictly Prohibited (Physician Scope Only)</h4>
+                                <ul style="margin-left: 20px; font-size: 0.9rem; color: var(--text-main);">
+                                    <li>Diagnosing arrhythmias or ECG wave changes</li>
+                                    <li>Informing patients of test results prior to provider review</li>
+                                    <li>Adjusting Anti-hypertensive or Anticoagulant doses</li>
+                                    <li>Providing medical opinions or reassurances on acuity</li>
+                                    <li>Ordering lab tests or diagnostics without authorization</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Scope Violation Warning Modal -->
+    <div class="modal-overlay" id="scopeModal">
+        <div class="modal-card">
+            <h3>⚠️ Scope of Practice Guard</h3>
+            <p style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 16px; line-height: 1.5;">
+                <strong>Action Restricted:</strong> Medical Assistants are strictly prohibited from independently interpreting ECG tracings or providing clinical diagnostics.
+            </p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                The ECG trace has been saved to the EMR and flagged for immediate <strong>Cardiologist Review</strong>.
+            </p>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="closeModal()">I Understand & Acknowledge</button>
+        </div>
+    </div>
+
+    <script>
+        // Tab Navigation Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            // Dynamic Header Updates
+            const titles = {
+                rooming: { title: "Patient Rooming & Intake", desc: "Record vital signs, update medications, and prepare patient history for the cardiologist." },
+                ecg: { title: "12-Lead ECG & Non-Invasive Diagnostics", desc: "Acquire ECG tracings, prep patients for stress testing, and configure telemetry monitors." },
+                scheduling: { title: "Schedule & Prior-Authorization Manager", desc: "Track diagnostic bookings, insurance authorizations, and referral workflows." },
+                triage: { title: "Clinical Triage & Escalation Protocol", desc: "Evaluate patient symptoms and escalate red-flag cardiovascular concerns." },
+                scope: { title: "Medical Assistant Scope Guidelines", desc: "Review mandatory scope limitations and clinical boundaries." }
+            };
+
+            document.getElementById('header-title').innerText = titles[tabId].title;
+            document.getElementById('header-desc').innerText = titles[tabId].desc;
+
+            if (tabId === 'ecg') {
+                initECGCanvas();
+            }
+        }
+
+        // Vitals Processing Logic
+        function processVitals() {
+            const sys = parseInt(document.getElementById('sysBP').value);
+            const dia = parseInt(document.getElementById('diaBP').value);
+            const hr = parseInt(document.getElementById('heartRate').value);
+            const spo2 = parseInt(document.getElementById('spo2').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const patient = document.getElementById('patientSelect').value;
+            const meds = document.getElementById('medsList').value;
+            const history = document.getElementById('historyNotes').value;
+
+            // Display values
+            document.getElementById('dispBP').innerText = `${sys}/${dia}`;
+            document.getElementById('dispHR').innerText = hr;
+            document.getElementById('dispSpO2').innerText = `${spo2}%`;
+            
+            // Calculate BMI
+            let bmi = "--";
+            if (weight && height) {
+                bmi = ((weight / (height * height)) * 703).toFixed(1);
+                document.getElementById('dispBMI').innerText = bmi;
+            }
+
+            // Flag Abnormalities
+            const bpStatus = document.getElementById('statusBP');
+            if (sys >= 140 || dia >= 90) {
+                bpStatus.innerText = "Elevated";
+                bpStatus.className = "vital-status status-danger";
+            } else {
+                bpStatus.innerText = "Normal";
+                bpStatus.className = "vital-status status-normal";
+            }
+
+            const hrStatus = document.getElementById('statusHR');
+            if (hr > 100 || hr < 50) {
+                hrStatus.innerText = "Abnormal";
+                hrStatus.className = "vital-status status-danger";
+            } else {
+                hrStatus.innerText = "Normal";
+                hrStatus.className = "vital-status status-normal";
+            }
+
+            const spo2Status = document.getElementById('statusSpO2');
+            if (spo2 < 95) {
+                spo2Status.innerText = "Low SpO2";
+                spo2Status.className = "vital-status status-danger";
+            } else {
+                spo2Status.innerText = "Optimal";
+                spo2Status.className = "vital-status status-normal";
+            }
+
+            document.getElementById('vitalsTimestamp').innerText = `Recorded: ${new Date().toLocaleTimeString()}`;
+
+            // Generate Clinical Handover Note
+            document.getElementById('emrSummary').innerHTML = `
+                <strong>Patient:</strong> ${patient}<br>
+                <strong>Vitals:</strong> BP: ${sys}/${dia} mmHg | HR: ${hr} bpm | SpO2: ${spo2}% | BMI: ${bmi}<br>
+                <strong>Medication Reconciliation:</strong> ${meds || 'Verified, no changes reported.'}<br>
+                <strong>Intake History:</strong> ${history || 'Routine checkup, no acute complaints noted.'}<br>
+                <div style="margin-top: 10px; padding: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; color: #166534; font-size: 0.8rem;">
+                    ✓ Charting updated in EMR. Patient roomed and ready for Cardiologist review.
+                </div>
+            `;
+        }
+
+        // Animated ECG Canvas
+        let animationId;
+        function initECGCanvas() {
+            const canvas = document.getElementById('ecgCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            let x = 0;
+            let type = 'normal';
+
+            window.simulateECG = function(mode) {
+                type = mode;
+            };
+
+            function drawGrid() {
+                ctx.strokeStyle = '#003300';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < canvas.width; i += 20) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                }
+                for (let j = 0; j < canvas.height; j += 20) {
+                    ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
+                }
+            }
+
+            drawGrid();
+
+            function animate() {
+                ctx.fillStyle = 'rgba(5, 20, 5, 0.05)';
+                ctx.fillRect(x, 0, 5, canvas.height);
+
+                ctx.strokeStyle = type === 'normal' ? '#00ff00' : '#ff3333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                let y = canvas.height / 2;
+                
+                // ECG Wave Simulator
+                let pos = x % 100;
+                if (pos > 40 && pos < 45) y -= 10; // P Wave
+                else if (pos >= 45 && pos < 48) y += 5; 
+                else if (pos >= 48 && pos < 52) y -= (type === 'normal' ? 60 : 80); // QRS Complex
+                else if (pos >= 52 && pos < 56) y += (type === 'normal' ? 20 : 10); // S Wave
+                else if (pos >= 65 && pos < 80) y -= (type === 'normal' ? 20 : 45); // T Wave (Elevated in STEMI)
+
+                ctx.moveTo(x, canvas.height / 2);
+                ctx.lineTo(x + 1, y);
+                ctx.stroke();
+
+                x = (x + 2) % canvas.width;
+                animationId = requestAnimationFrame(animate);
+            }
+
+            if (animationId) cancelAnimationFrame(animationId);
+            animate();
+        }
+
+        // Scope Restriction Modal Trigger
+        function triggerScopeModal(actionName) {
+            document.getElementById('scopeModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('scopeModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
