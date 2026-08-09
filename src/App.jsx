@@ -99,7 +99,7 @@ function initialsFor(name) {
 function Logo() {
   return (
     <div className="brand-lockup" aria-label="CardioSuite Clinical Workspace">
-      <span className="brand-mark"><Heartbeat size={28} weight="regular" /></span>
+      <span className="brand-mark"><img src="/favicon.svg" alt="" aria-hidden="true" /></span>
       <span>
         <strong>CardioSuite</strong>
         <small>Clinical Workspace</small>
