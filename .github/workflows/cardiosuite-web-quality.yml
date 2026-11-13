@@ -1,0 +1,43 @@
+name: CardioSuite Web Quality
+on:
+  push:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.mjs"
+      - ".github/workflows/cardiosuite-web-quality.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.mjs"
+      - ".github/workflows/cardiosuite-web-quality.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify demo handoff and data preservation
+        run: node --test tests/demo-handoff.test.mjs
+      - name: Existing offline regression tests
+        run: npm run test:offline
+      - name: Canonical Sites build
+        run: npm run build
+      - name: Existing Sites worker tests
+        run: npm run test:sites
