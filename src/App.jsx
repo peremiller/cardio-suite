@@ -49,6 +49,7 @@ import {
   signOut,
   startSession,
 } from "./auth.js";
+import { preserveDemoHandoff } from "./demo-handoff.mjs";
 
 const patients = [
   { id: "john", initials: "JD", name: "John Doe", age: 72, sex: "Male", time: "09:05 AM", status: "In Room", tone: "green", mrn: "12345678", dob: "05/14/1954", visit: "Routine Follow-up", room: "Exam Room 3" },
@@ -159,7 +160,7 @@ function AuthScreen({ onAuthenticated }) {
         </div>
         <div className="trust-row">
           <span><ShieldCheck size={19} /> Role-aware access</span>
-          <span><UsersThree size={19} /> Individual staff accounts</span>
+          <span><UsersThree size={19} /> Browser-local demo accounts</span>
         </div>
       </section>
 
@@ -170,7 +171,7 @@ function AuthScreen({ onAuthenticated }) {
           <h2>{mode === "login" ? "Sign in to CardioSuite" : "Create a staff account"}</h2>
           <p className="auth-intro">
             {mode === "login"
-              ? "Use your individual clinic account to continue."
+              ? "Use the browser-local demo account you created on this device."
               : "Create a local demonstration account for this workspace."}
           </p>
 
@@ -224,7 +225,7 @@ function AuthScreen({ onAuthenticated }) {
             {error && <div className="form-error" role="alert"><Warning size={18} /> {error}</div>}
 
             <button className="primary-button auth-submit" disabled={busy}>
-              {busy ? "Please wait…" : mode === "login" ? "Sign in securely" : "Create account"}
+              {busy ? "Please wait…" : mode === "login" ? "Sign in to demo" : "Create account"}
               <CaretRight size={18} />
             </button>
           </form>
@@ -437,7 +438,7 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
 
   function saveDraft() {
     localStorage.setItem(draftKey, JSON.stringify(values));
-    notify("Draft saved to this staff account.");
+    notify("Draft saved in this browser only.");
   }
 
   function clearForm() {
@@ -451,27 +452,34 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
       notify("Complete the required vitals and history before handoff.", "warning");
       return;
     }
+    try {
+      preserveDemoHandoff(localStorage, draftKey, values);
+    } catch {
+      notify("Demo handoff was not saved. Check browser storage and retry.", "warning");
+      return;
+    }
     setSent(true);
     onReady();
     onStep("handoff");
-    localStorage.removeItem(draftKey);
-    notify(redFlag ? "Red flag detected—physician alerted immediately." : "Handoff sent to Dr. Michael Anderson.");
+    notify(redFlag
+      ? "Demo handoff saved locally with a review flag. No clinical alert was sent."
+      : "Demo handoff saved locally. No physician notification was sent.");
   }
 
   return (
     <div className="clinical-body">
       <section className="intake-canvas">
         <div className="section-heading">
-          <div><h2>{activeStep === "handoff" ? "Handoff Readiness" : "Intake & Vital Signs"}</h2><p>{sent ? "Sent to physician at 09:24 AM" : "Captured 09:24 AM"} <Check size={15} weight="bold" /></p></div>
+          <div><h2>{activeStep === "handoff" ? "Handoff Readiness" : "Intake & Vital Signs"}</h2><p>{sent ? "Saved in this browser" : "Demo intake — not sent"} <Check size={15} weight="bold" /></p></div>
           <button className="outline-small"><PencilSimple size={15} /> Edit</button>
         </div>
 
         {activeStep === "handoff" ? (
           <div className="handoff-complete">
             <span><CheckCircle size={54} weight="fill" /></span>
-            <h3>{sent ? "Physician handoff sent" : "Review the intake before sending"}</h3>
-            <p>{sent ? `Dr. Michael Anderson has been notified that ${patient.name}'s intake is ready.` : "All required intake sections are ready for final review."}</p>
-            {!sent && <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={20} /> Send handoff to physician</button>}
+            <h3>{sent ? "Demo handoff saved locally" : "Review the demo intake"}</h3>
+            <p>{sent ? `The sample intake for ${patient.name} remains in this browser. No clinician has been notified.` : "Review the sample intake before saving a local handoff."}</p>
+            {!sent && <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={20} /> Save demo handoff</button>}
           </div>
         ) : (
           <>
@@ -507,7 +515,7 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
 
         {activeStep !== "handoff" && (
           <div className="form-actions">
-            <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={21} /> Send handoff to physician</button>
+            <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={21} /> Save demo handoff</button>
             <button className="secondary-button" onClick={saveDraft}><FloppyDisk size={19} /> Save draft</button>
             <button className="tertiary-button" onClick={clearForm}><Trash size={18} /> Clear</button>
           </div>
@@ -528,10 +536,10 @@ function HandoffPanel({ values, bmi, redFlag, sent, onStep }) {
   ];
   return (
     <aside className="handoff-panel">
-      <div className="panel-heading"><h2>Clinical Handoff Panel</h2><small>Last updated 09:24 AM <Clock size={14} /></small></div>
-      <div className="scope-card"><ShieldCheck size={24} /><span><strong>Scope Guard Active</strong><small>You can collect and document intake data. Clinical decisions remain with the physician.</small></span></div>
+      <div className="panel-heading"><h2>Demo Handoff Panel</h2><small>Browser-local sample <Clock size={14} /></small></div>
+      <div className="scope-card"><ShieldCheck size={24} /><span><strong>Scope guidance (demo only)</strong><small>You can collect and document intake data. Clinical decisions remain with the physician.</small></span></div>
       <div className="panel-section">
-        <div className="panel-subhead"><h3>Live Intake Vitals</h3><small>Updated just now</small></div>
+        <div className="panel-subhead"><h3>Sample Intake Vitals</h3><small>Browser-local</small></div>
         <div className="vital-cards">
           {vitals.map(([label, value, unit, alert]) => (
             <div className={alert ? "vital-card alert" : "vital-card"} key={label}><small>{label}</small><strong>{value}</strong><em>{unit}</em><span>{alert ? "Review" : label === "BMI" ? "Overweight" : "Normal"}</span></div>
@@ -552,8 +560,8 @@ function HandoffPanel({ values, bmi, redFlag, sent, onStep }) {
         <button onClick={() => onStep("intake")}><CheckCircle size={18} weight="fill" /> Intake &amp; Vitals <span>Captured 09:24 AM</span></button>
         <button onClick={() => onStep("medication")}><CheckCircle size={18} weight="fill" /> Medication Reconciliation <span>Verified 09:20 AM</span></button>
         <button onClick={() => onStep("history")}><CheckCircle size={18} weight="fill" /> Chief Complaint / History <span>Captured 09:22 AM</span></button>
-        <button onClick={() => onStep("handoff")}>{sent ? <CheckCircle size={18} weight="fill" /> : <span className="empty-check" />} Handoff Readiness <span>{sent ? "Sent" : "Pending"}</span></button>
-        <p><Info size={18} /> {sent ? "Physician notification delivered." : "Review all sections and send the handoff to notify the physician."}</p>
+        <button onClick={() => onStep("handoff")}>{sent ? <CheckCircle size={18} weight="fill" /> : <span className="empty-check" />} Handoff Readiness <span>{sent ? "Saved locally" : "Pending"}</span></button>
+        <p><Info size={18} /> {sent ? "This handoff is saved on this device only; no physician notification was delivered." : "Review all sections before saving a browser-local demo handoff."}</p>
       </div>
     </aside>
   );
