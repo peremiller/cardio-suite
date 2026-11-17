@@ -49,7 +49,7 @@ import {
   signOut,
   startSession,
 } from "./auth.js";
-import { preserveDemoHandoff } from "./demo-handoff.mjs";
+import { preserveDemoHandoff, readDemoDraft } from "./demo-handoff.mjs";
 
 const patients = [
   { id: "john", initials: "JD", name: "John Doe", age: 72, sex: "Male", time: "09:05 AM", status: "In Room", tone: "green", mrn: "12345678", dob: "05/14/1954", visit: "Routine Follow-up", room: "Exam Room 3" },
@@ -394,8 +394,9 @@ function StepTabs({ active, onChange, complete }) {
 
 function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const draftKey = `cardiosuite.draft.${patient.id}`;
-  const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
-  const [values, setValues] = useState(saved || {
+  const initialDraft = readDemoDraft(localStorage, draftKey);
+  const [unreadableDraft, setUnreadableDraft] = useState(initialDraft.unreadable);
+  const [values, setValues] = useState(initialDraft.values || {
     systolic: "120",
     diastolic: "80",
     heartRate: "72",
@@ -409,7 +410,8 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    const nextSaved = JSON.parse(localStorage.getItem(`cardiosuite.draft.${patient.id}`) || "null");
+    const { values: nextSaved, unreadable } = readDemoDraft(localStorage, `cardiosuite.draft.${patient.id}`);
+    setUnreadableDraft(unreadable);
     setValues(nextSaved || {
       systolic: patient.alert ? "178" : "120",
       diastolic: patient.alert ? "104" : "80",
@@ -437,17 +439,38 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const redFlag = Number(values.systolic) >= 180 || Number(values.diastolic) >= 110 || Number(values.spo2) <= 90 || Number(values.heartRate) >= 120 || Number(values.heartRate) <= 40;
 
   function saveDraft() {
-    localStorage.setItem(draftKey, JSON.stringify(values));
-    notify("Draft saved in this browser only.");
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; nothing saved.", "warning");
+      return;
+    }
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(values));
+      notify("Draft saved in this browser only.");
+    } catch {
+      notify("Demo draft could not be saved; check browser storage.", "warning");
+    }
   }
 
   function clearForm() {
-    localStorage.removeItem(draftKey);
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; nothing cleared.", "warning");
+      return;
+    }
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      notify("Demo draft could not be cleared; check browser storage.", "warning");
+      return;
+    }
     setValues((current) => ({ ...current, medications: "", history: "", notes: "", systolic: "", diastolic: "", heartRate: "", spo2: "", weight: "", height: "" }));
     notify("Intake form cleared.");
   }
 
   function sendHandoff() {
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; no handoff saved.", "warning");
+      return;
+    }
     if (!values.systolic || !values.diastolic || !values.heartRate || !values.spo2 || !values.history) {
       notify("Complete the required vitals and history before handoff.", "warning");
       return;
@@ -474,12 +497,14 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
           <button className="outline-small"><PencilSimple size={15} /> Edit</button>
         </div>
 
+        {unreadableDraft && <div className="form-error" role="alert"><Warning size={18} /> An existing browser-local draft could not be read. It has not been deleted or overwritten. Saving and clearing are disabled to protect it.</div>}
+
         {activeStep === "handoff" ? (
           <div className="handoff-complete">
             <span><CheckCircle size={54} weight="fill" /></span>
             <h3>{sent ? "Demo handoff saved locally" : "Review the demo intake"}</h3>
             <p>{sent ? `The sample intake for ${patient.name} remains in this browser. No clinician has been notified.` : "Review the sample intake before saving a local handoff."}</p>
-            {!sent && <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={20} /> Save demo handoff</button>}
+            {!sent && <button className="primary-button" onClick={sendHandoff} disabled={unreadableDraft}><PaperPlaneTilt size={20} /> Save demo handoff</button>}
           </div>
         ) : (
           <>
@@ -515,9 +540,9 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
 
         {activeStep !== "handoff" && (
           <div className="form-actions">
-            <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={21} /> Save demo handoff</button>
-            <button className="secondary-button" onClick={saveDraft}><FloppyDisk size={19} /> Save draft</button>
-            <button className="tertiary-button" onClick={clearForm}><Trash size={18} /> Clear</button>
+            <button className="primary-button" onClick={sendHandoff} disabled={unreadableDraft}><PaperPlaneTilt size={21} /> Save demo handoff</button>
+            <button className="secondary-button" onClick={saveDraft} disabled={unreadableDraft}><FloppyDisk size={19} /> Save draft</button>
+            <button className="tertiary-button" onClick={clearForm} disabled={unreadableDraft}><Trash size={18} /> Clear</button>
           </div>
         )}
       </section>
