@@ -73,10 +73,10 @@ test("storage read errors do not silently reset a draft", () => {
 
 test("unreadable demo draft prevents save, clear and handoff through visible, disabled controls", () => {
   const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
-  assert.match(app, /readDemoDraft\\(localStorage, draftKey\\)/);
-  assert.match(app, /setUnreadableDraft\\(unreadable\\)/);
-  assert.match(app, /unreadableDraft && <div className="form-error" role="alert">/);
-  assert.match(app, /onClick=\\{sendHandoff\\} disabled=\\{unreadableDraft\\}/);
-  assert.match(app, /onClick=\\{saveDraft\\} disabled=\\{unreadableDraft\\}/);
-  assert.match(app, /onClick=\\{clearForm\\} disabled=\\{unreadableDraft\\}/);
+  assert.ok(app.includes("readDemoDraft(localStorage, draftKey)"));
+  assert.ok(app.includes("setUnreadableDraft(unreadable)"));
+  assert.ok(app.includes('unreadableDraft && <div className="form-error" role="alert">'));
+  assert.ok(app.includes("onClick={sendHandoff} disabled={unreadableDraft}"));
+  assert.ok(app.includes("onClick={saveDraft} disabled={unreadableDraft}"));
+  assert.ok(app.includes("onClick={clearForm} disabled={unreadableDraft}"));
 });
