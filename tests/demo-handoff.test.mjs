@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { preserveDemoHandoff } from "../src/demo-handoff.mjs";
+import { preserveDemoHandoff, readDemoDraft } from "../src/demo-handoff.mjs";
 
 function storageWith(existing = {}) {
   const records = new Map(Object.entries(existing));
@@ -45,4 +45,38 @@ test("UI does not claim a clinician received a local-only handoff", () => {
   assert.match(app, /No physician notification was sent/);
   assert.doesNotMatch(app, /physician alerted immediately|Handoff sent to Dr\.|Physician notification delivered\.|has been notified that/);
   assert.doesNotMatch(app, /localStorage\.removeItem\(draftKey\);\s*notify\(redFlag/);
+});
+
+test("valid existing demo drafts are restored unchanged and do not mutate other records", () => {
+  const values = { systolic: "120", diastolic: "80", heartRate: "72", spo2: "98", weight: "175", height: "68", medications: "", history: "sample", notes: "" };
+  const original = JSON.stringify(values);
+  const storage = storageWith({ "cardiosuite.draft.john": original, "cardiosuite.accounts.v1": "account data" });
+  assert.deepEqual(readDemoDraft(storage, "cardiosuite.draft.john"), { values, unreadable: false });
+  assert.equal(storage.getItem("cardiosuite.draft.john"), original);
+  assert.equal(storage.getItem("cardiosuite.accounts.v1"), "account data");
+  assert.deepEqual(readDemoDraft(storage, "cardiosuite.draft.anna"), { values: null, unreadable: false });
+});
+
+test("invalid, partial and malformed drafts remain untouched and are reported unreadable", () => {
+  for (const raw of ["{broken JSON", "null", "[]", '{"history":""}', '"text"']) {
+    const storage = storageWith({ "cardiosuite.draft.john": raw, "cardiosuite.session.v1": "unchanged" });
+    assert.deepEqual(readDemoDraft(storage, "cardiosuite.draft.john"), { values: null, unreadable: true });
+    assert.equal(storage.getItem("cardiosuite.draft.john"), raw);
+    assert.equal(storage.getItem("cardiosuite.session.v1"), "unchanged");
+  }
+});
+
+test("storage read errors do not silently reset a draft", () => {
+  const storage = { getItem() { throw new Error("SecurityError"); } };
+  assert.deepEqual(readDemoDraft(storage, "cardiosuite.draft.john"), { values: null, unreadable: true });
+});
+
+test("unreadable demo draft prevents save, clear and handoff through visible, disabled controls", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /readDemoDraft\\(localStorage, draftKey\\)/);
+  assert.match(app, /setUnreadableDraft\\(unreadable\\)/);
+  assert.match(app, /unreadableDraft && <div className="form-error" role="alert">/);
+  assert.match(app, /onClick=\\{sendHandoff\\} disabled=\\{unreadableDraft\\}/);
+  assert.match(app, /onClick=\\{saveDraft\\} disabled=\\{unreadableDraft\\}/);
+  assert.match(app, /onClick=\\{clearForm\\} disabled=\\{unreadableDraft\\}/);
 });
