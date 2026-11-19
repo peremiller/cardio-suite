@@ -331,24 +331,41 @@ function Navigation({ user, active, onChange, open, onClose }) {
 
 function PatientQueue({ selected, onSelect, completed, onToggleMobile }) {
   const [query, setQuery] = useState("");
-  const visible = patients.filter((patient) => patient.name.toLowerCase().includes(query.toLowerCase()));
+  const [statusFilter, setStatusFilter] = useState("all");
+  const statusFor = (patient) => completed && patient.id === selected.id ? "Ready" : patient.status;
+  const filters = [
+    { id: "all", label: "All", count: patients.length },
+    { id: "room", label: "In Room", count: patients.filter((patient) => statusFor(patient) === "In Room").length },
+    { id: "ready", label: "Ready", count: patients.filter((patient) => statusFor(patient) === "Ready").length },
+  ];
+  const visible = patients.filter((patient) =>
+    patient.name.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "all" || (statusFilter === "room" ? statusFor(patient) === "In Room" : statusFor(patient) === "Ready"))
+  );
   return (
     <aside className="patient-queue">
       <div className="queue-head">
-        <div><h2>Today&apos;s Arrivals <span>8</span></h2><button className="queue-close-mobile" onClick={onToggleMobile}><X size={18} /></button></div>
+        <div><h2>Today&apos;s Arrivals <span>{patients.length}</span></h2><button className="queue-close-mobile" onClick={onToggleMobile} aria-label="Close arrivals queue"><X size={18} /></button></div>
         <div className="queue-search">
           <MagnifyingGlass size={17} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients…" />
-          <FunnelSimple size={18} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients…" aria-label="Search sample arrivals" />
+          <FunnelSimple size={18} aria-hidden="true" />
         </div>
-        <div className="queue-tabs"><button className="active">All <b>8</b></button><button>In Room <b>3</b></button><button>Ready <b>{completed ? 2 : 1}</b></button></div>
+        <div className="queue-tabs" role="group" aria-label="Filter sample arrivals">
+          {filters.map(({ id, label, count }) => (
+            <button key={id} type="button" className={statusFilter === id ? "active" : ""} aria-pressed={statusFilter === id} onClick={() => setStatusFilter(id)}>
+              {label} <b>{count}</b>
+            </button>
+          ))}
+        </div>
       </div>
       <div className="patient-list">
+        {visible.length === 0 && <p className="queue-empty" role="status">No sample arrivals match these filters.</p>}
         {visible.map((patient) => (
-          <button key={patient.id} className={selected.id === patient.id ? "patient-row selected" : "patient-row"} onClick={() => onSelect(patient)}>
+          <button key={patient.id} className={selected.id === patient.id ? "patient-row selected" : "patient-row"} aria-pressed={selected.id === patient.id} onClick={() => onSelect(patient)}>
             <span className="avatar patient-avatar">{patient.initials}</span>
             <span className="patient-copy">
-              <span><strong>{patient.name}</strong><em className={`status ${patient.tone}`}>{completed && patient.id === selected.id ? "Ready" : patient.status}</em></span>
+              <span><strong>{patient.name}</strong><em className={`status ${patient.tone}`}>{statusFor(patient)}</em></span>
               <small>{patient.age} y/o <i>•</i> {patient.sex}</small>
               <small>{patient.time}</small>
             </span>
@@ -356,7 +373,7 @@ function PatientQueue({ selected, onSelect, completed, onToggleMobile }) {
           </button>
         ))}
       </div>
-      <div className="queue-update">Updated 09:24 AM <Clock size={15} /></div>
+      <div className="queue-update">Sample arrivals · not live</div>
     </aside>
   );
 }
