@@ -66,6 +66,17 @@ test("invalid, partial and malformed drafts remain untouched and are reported un
   }
 });
 
+test("sample arrival filters are interactive and never claim live queue freshness", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /const \[statusFilter, setStatusFilter\] = useState\("all"\)/);
+  assert.match(app, /onClick=\{\(\) => setStatusFilter\(id\)\}/);
+  assert.match(app, /aria-pressed=\{statusFilter === id\}/);
+  assert.match(app, /aria-label="Search sample arrivals"/);
+  assert.match(app, /visible\.length === 0.*role="status"/);
+  assert.match(app, /Sample arrivals · not live/);
+  assert.doesNotMatch(app, /Updated 09:24 AM/);
+});
+
 test("storage read errors do not silently reset a draft", () => {
   const storage = { getItem() { throw new Error("SecurityError"); } };
   assert.deepEqual(readDemoDraft(storage, "cardiosuite.draft.john"), { values: null, unreadable: true });
