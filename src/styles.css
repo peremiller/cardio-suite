@@ -894,6 +894,14 @@ select:focus-visible {
   overflow-y: auto;
 }
 
+.queue-empty {
+  margin: 0;
+  padding: 18px 15px;
+  color: var(--slate-700);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .patient-row {
   width: 100%;
   min-height: 82px;
