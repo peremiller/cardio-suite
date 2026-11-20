@@ -253,7 +253,18 @@ function AuthScreen({ onAuthenticated }) {
 function UserMenu({ user, onSignOut, onManageTeam }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="user-menu">
+    <div
+      className="user-menu"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          setOpen(false);
+          event.currentTarget.querySelector(".user-trigger")?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
       <button className="user-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <span className="avatar" style={{ "--avatar-color": user.color }}>{user.initials}</span>
         <span className="user-copy"><strong>{user.name}</strong><small>{user.title}</small></span>
@@ -317,7 +328,7 @@ function Navigation({ user, active, onChange, open, onClose }) {
         <div className="mobile-nav-head"><Logo /><button onClick={onClose} aria-label="Close navigation"><X size={22} /></button></div>
         <div className="nav-list">
           {available.map(({ id, label, Icon }) => (
-            <button className={active === id ? "nav-item active" : "nav-item"} key={id} onClick={() => { onChange(id); onClose(); }}>
+            <button className={active === id ? "nav-item active" : "nav-item"} aria-current={active === id ? "page" : undefined} key={id} onClick={() => { onChange(id); onClose(); }}>
               <Icon size={24} />
               <span>{label}</span>
             </button>
@@ -727,7 +738,7 @@ export function App() {
   }, []);
 
   if (user === undefined) {
-    return <div className="loading-screen"><Heartbeat size={36} /><span>Opening CardioSuite…</span></div>;
+    return <div className="loading-screen" role="status" aria-live="polite"><Heartbeat size={36} /><span>Opening CardioSuite…</span></div>;
   }
   if (!user) return <AuthScreen onAuthenticated={setUser} />;
 
