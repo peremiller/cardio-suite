@@ -91,3 +91,18 @@ test("unreadable demo draft prevents save, clear and handoff through visible, di
   assert.ok(app.includes("onClick={saveDraft} disabled={unreadableDraft}"));
   assert.ok(app.includes("onClick={clearForm} disabled={unreadableDraft}"));
 });
+
+
+test("account menu supports Escape, focus return, and closing after keyboard exit", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /event\.key === "Escape" && open/);
+  assert.match(app, /querySelector\("\.user-trigger"\)\?\.focus\(\)/);
+  assert.match(app, /!event\.currentTarget\.contains\(event\.relatedTarget\)/);
+  assert.match(app, /aria-expanded=\{open\}/);
+});
+
+test("workspace navigation exposes active page and app loading announcements", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /aria-current=\{active === id \? "page" : undefined\}/);
+  assert.match(app, /className="loading-screen" role="status" aria-live="polite"/);
+});
