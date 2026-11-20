@@ -49,7 +49,7 @@ import {
   signOut,
   startSession,
 } from "./auth.js";
-import { preserveDemoHandoff } from "./demo-handoff.mjs";
+import { preserveDemoHandoff, readDemoDraft } from "./demo-handoff.mjs";
 
 const patients = [
   { id: "john", initials: "JD", name: "John Doe", age: 72, sex: "Male", time: "09:05 AM", status: "In Room", tone: "green", mrn: "12345678", dob: "05/14/1954", visit: "Routine Follow-up", room: "Exam Room 3" },
@@ -253,7 +253,18 @@ function AuthScreen({ onAuthenticated }) {
 function UserMenu({ user, onSignOut, onManageTeam }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="user-menu">
+    <div
+      className="user-menu"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          setOpen(false);
+          event.currentTarget.querySelector(".user-trigger")?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
       <button className="user-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
         <span className="avatar" style={{ "--avatar-color": user.color }}>{user.initials}</span>
         <span className="user-copy"><strong>{user.name}</strong><small>{user.title}</small></span>
@@ -317,7 +328,7 @@ function Navigation({ user, active, onChange, open, onClose }) {
         <div className="mobile-nav-head"><Logo /><button onClick={onClose} aria-label="Close navigation"><X size={22} /></button></div>
         <div className="nav-list">
           {available.map(({ id, label, Icon }) => (
-            <button className={active === id ? "nav-item active" : "nav-item"} key={id} onClick={() => { onChange(id); onClose(); }}>
+            <button className={active === id ? "nav-item active" : "nav-item"} aria-current={active === id ? "page" : undefined} key={id} onClick={() => { onChange(id); onClose(); }}>
               <Icon size={24} />
               <span>{label}</span>
             </button>
@@ -331,24 +342,41 @@ function Navigation({ user, active, onChange, open, onClose }) {
 
 function PatientQueue({ selected, onSelect, completed, onToggleMobile }) {
   const [query, setQuery] = useState("");
-  const visible = patients.filter((patient) => patient.name.toLowerCase().includes(query.toLowerCase()));
+  const [statusFilter, setStatusFilter] = useState("all");
+  const statusFor = (patient) => completed && patient.id === selected.id ? "Ready" : patient.status;
+  const filters = [
+    { id: "all", label: "All", count: patients.length },
+    { id: "room", label: "In Room", count: patients.filter((patient) => statusFor(patient) === "In Room").length },
+    { id: "ready", label: "Ready", count: patients.filter((patient) => statusFor(patient) === "Ready").length },
+  ];
+  const visible = patients.filter((patient) =>
+    patient.name.toLowerCase().includes(query.toLowerCase())
+    && (statusFilter === "all" || (statusFilter === "room" ? statusFor(patient) === "In Room" : statusFor(patient) === "Ready"))
+  );
   return (
     <aside className="patient-queue">
       <div className="queue-head">
-        <div><h2>Today&apos;s Arrivals <span>8</span></h2><button className="queue-close-mobile" onClick={onToggleMobile}><X size={18} /></button></div>
+        <div><h2>Today&apos;s Arrivals <span>{patients.length}</span></h2><button className="queue-close-mobile" onClick={onToggleMobile} aria-label="Close arrivals queue"><X size={18} /></button></div>
         <div className="queue-search">
           <MagnifyingGlass size={17} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients…" />
-          <FunnelSimple size={18} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients…" aria-label="Search sample arrivals" />
+          <FunnelSimple size={18} aria-hidden="true" />
         </div>
-        <div className="queue-tabs"><button className="active">All <b>8</b></button><button>In Room <b>3</b></button><button>Ready <b>{completed ? 2 : 1}</b></button></div>
+        <div className="queue-tabs" role="group" aria-label="Filter sample arrivals">
+          {filters.map(({ id, label, count }) => (
+            <button key={id} type="button" className={statusFilter === id ? "active" : ""} aria-pressed={statusFilter === id} onClick={() => setStatusFilter(id)}>
+              {label} <b>{count}</b>
+            </button>
+          ))}
+        </div>
       </div>
       <div className="patient-list">
+        {visible.length === 0 && <p className="queue-empty" role="status">No sample arrivals match these filters.</p>}
         {visible.map((patient) => (
-          <button key={patient.id} className={selected.id === patient.id ? "patient-row selected" : "patient-row"} onClick={() => onSelect(patient)}>
+          <button key={patient.id} className={selected.id === patient.id ? "patient-row selected" : "patient-row"} aria-pressed={selected.id === patient.id} onClick={() => onSelect(patient)}>
             <span className="avatar patient-avatar">{patient.initials}</span>
             <span className="patient-copy">
-              <span><strong>{patient.name}</strong><em className={`status ${patient.tone}`}>{completed && patient.id === selected.id ? "Ready" : patient.status}</em></span>
+              <span><strong>{patient.name}</strong><em className={`status ${patient.tone}`}>{statusFor(patient)}</em></span>
               <small>{patient.age} y/o <i>•</i> {patient.sex}</small>
               <small>{patient.time}</small>
             </span>
@@ -356,7 +384,7 @@ function PatientQueue({ selected, onSelect, completed, onToggleMobile }) {
           </button>
         ))}
       </div>
-      <div className="queue-update">Updated 09:24 AM <Clock size={15} /></div>
+      <div className="queue-update">Sample arrivals · not live</div>
     </aside>
   );
 }
@@ -394,8 +422,9 @@ function StepTabs({ active, onChange, complete }) {
 
 function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const draftKey = `cardiosuite.draft.${patient.id}`;
-  const saved = JSON.parse(localStorage.getItem(draftKey) || "null");
-  const [values, setValues] = useState(saved || {
+  const initialDraft = readDemoDraft(localStorage, draftKey);
+  const [unreadableDraft, setUnreadableDraft] = useState(initialDraft.unreadable);
+  const [values, setValues] = useState(initialDraft.values || {
     systolic: "120",
     diastolic: "80",
     heartRate: "72",
@@ -409,7 +438,8 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    const nextSaved = JSON.parse(localStorage.getItem(`cardiosuite.draft.${patient.id}`) || "null");
+    const { values: nextSaved, unreadable } = readDemoDraft(localStorage, `cardiosuite.draft.${patient.id}`);
+    setUnreadableDraft(unreadable);
     setValues(nextSaved || {
       systolic: patient.alert ? "178" : "120",
       diastolic: patient.alert ? "104" : "80",
@@ -437,17 +467,38 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
   const redFlag = Number(values.systolic) >= 180 || Number(values.diastolic) >= 110 || Number(values.spo2) <= 90 || Number(values.heartRate) >= 120 || Number(values.heartRate) <= 40;
 
   function saveDraft() {
-    localStorage.setItem(draftKey, JSON.stringify(values));
-    notify("Draft saved in this browser only.");
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; nothing saved.", "warning");
+      return;
+    }
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(values));
+      notify("Draft saved in this browser only.");
+    } catch {
+      notify("Demo draft could not be saved; check browser storage.", "warning");
+    }
   }
 
   function clearForm() {
-    localStorage.removeItem(draftKey);
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; nothing cleared.", "warning");
+      return;
+    }
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      notify("Demo draft could not be cleared; check browser storage.", "warning");
+      return;
+    }
     setValues((current) => ({ ...current, medications: "", history: "", notes: "", systolic: "", diastolic: "", heartRate: "", spo2: "", weight: "", height: "" }));
     notify("Intake form cleared.");
   }
 
   function sendHandoff() {
+    if (unreadableDraft) {
+      notify("Existing demo draft is unreadable and was preserved; no handoff saved.", "warning");
+      return;
+    }
     if (!values.systolic || !values.diastolic || !values.heartRate || !values.spo2 || !values.history) {
       notify("Complete the required vitals and history before handoff.", "warning");
       return;
@@ -474,12 +525,14 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
           <button className="outline-small"><PencilSimple size={15} /> Edit</button>
         </div>
 
+        {unreadableDraft && <div className="form-error" role="alert"><Warning size={18} /> An existing browser-local draft could not be read. It has not been deleted or overwritten. Saving and clearing are disabled to protect it.</div>}
+
         {activeStep === "handoff" ? (
           <div className="handoff-complete">
             <span><CheckCircle size={54} weight="fill" /></span>
             <h3>{sent ? "Demo handoff saved locally" : "Review the demo intake"}</h3>
             <p>{sent ? `The sample intake for ${patient.name} remains in this browser. No clinician has been notified.` : "Review the sample intake before saving a local handoff."}</p>
-            {!sent && <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={20} /> Save demo handoff</button>}
+            {!sent && <button className="primary-button" onClick={sendHandoff} disabled={unreadableDraft}><PaperPlaneTilt size={20} /> Save demo handoff</button>}
           </div>
         ) : (
           <>
@@ -515,9 +568,9 @@ function IntakeForm({ patient, activeStep, onStep, onReady, notify }) {
 
         {activeStep !== "handoff" && (
           <div className="form-actions">
-            <button className="primary-button" onClick={sendHandoff}><PaperPlaneTilt size={21} /> Save demo handoff</button>
-            <button className="secondary-button" onClick={saveDraft}><FloppyDisk size={19} /> Save draft</button>
-            <button className="tertiary-button" onClick={clearForm}><Trash size={18} /> Clear</button>
+            <button className="primary-button" onClick={sendHandoff} disabled={unreadableDraft}><PaperPlaneTilt size={21} /> Save demo handoff</button>
+            <button className="secondary-button" onClick={saveDraft} disabled={unreadableDraft}><FloppyDisk size={19} /> Save draft</button>
+            <button className="tertiary-button" onClick={clearForm} disabled={unreadableDraft}><Trash size={18} /> Clear</button>
           </div>
         )}
       </section>
@@ -685,7 +738,7 @@ export function App() {
   }, []);
 
   if (user === undefined) {
-    return <div className="loading-screen"><Heartbeat size={36} /><span>Opening CardioSuite…</span></div>;
+    return <div className="loading-screen" role="status" aria-live="polite"><Heartbeat size={36} /><span>Opening CardioSuite…</span></div>;
   }
   if (!user) return <AuthScreen onAuthenticated={setUser} />;
 
